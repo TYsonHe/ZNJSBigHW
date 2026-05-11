@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(pip --version)",
+      "Bash(python:*)",
+      "WebFetch(domain:scholar.google.com)",
+      "WebFetch(domain:www.semanticscholar.org)"
+    ]
+  }
+}
