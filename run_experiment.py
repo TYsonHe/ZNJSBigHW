@@ -6,6 +6,7 @@
 import numpy as np
 import json
 import os
+from datetime import datetime
 
 from algorithms.pso import PSO
 from algorithms.ssa import SSA
@@ -26,7 +27,7 @@ ALGORITHMS = {
     'CLSA-PO': CLSA_PO(pop_size=POP_SIZE, max_iter=MAX_ITER),
 }
 
-OUTPUT_DIR = 'output'
+OUTPUT_DIR = 'output/' + datetime.now().strftime('%Y%m%d_%H%M%S')
 
 
 def run_single(algorithm, func, dim, lb, ub):
