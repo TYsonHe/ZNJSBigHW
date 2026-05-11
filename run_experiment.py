@@ -1,7 +1,7 @@
 """
 阶段3：对比实验运行脚本
-在5个基准测试函数上运行4种算法（PO、CLSA-PO、SSA、PSO）各30次，
-输出统计表格（最优值、均值、标准差）和收敛曲线对比图。
+在8个基准测试函数上运行4种算法（PO、CLSA-PO、SSA、PSO）各30次，
+输出统计表格（最优值、均值、标准差）、收敛曲线对比图和Wilcoxon秩和检验结果。
 """
 import numpy as np
 import json
@@ -17,7 +17,7 @@ from algorithms.utils import BENCHMARK_FUNCTIONS
 # ========== 实验参数 ==========
 POP_SIZE = 50
 MAX_ITER = 500
-DIM = 30
+DIM = 50
 RUNS = 30
 
 ALGORITHMS = {
@@ -111,6 +111,65 @@ def print_summary_table(results):
             print(f"{algo_name:<10} {r['best']:<15.4e} {r['worst']:<15.4e} {r['mean']:<15.4e} {r['median']:<15.4e} {r['std']:<15.4e}")
 
 
+def wilcoxon_rank_sum_test(results):
+    """Wilcoxon秩和检验：CLSA-PO vs 其他算法"""
+    from scipy.stats import mannwhitneyu
+
+    print(f"\n{'='*80}")
+    print("Wilcoxon秩和检验结果（CLSA-PO vs 其他算法，α=0.05）")
+    print(f"{'='*80}")
+    print(f"{'函数':<12} {'对比算法':<10} {'p值':<15} {'符号':<6} {'结论'}")
+    print('-' * 80)
+
+    test_results = {}
+    for func_name in results:
+        test_results[func_name] = {}
+        clsa_fits = np.array(results[func_name]['CLSA-PO']['all_fits'])
+
+        for algo_name in ['PSO', 'SSA', 'PO']:
+            algo_fits = np.array(results[func_name][algo_name]['all_fits'])
+
+            # 当所有值完全相同时无法进行检验
+            if np.all(clsa_fits == algo_fits):
+                symbol = '≈'
+                conclusion = '无显著差异'
+                p_val = 1.0
+            else:
+                try:
+                    stat, p_val = mannwhitneyu(clsa_fits, algo_fits, alternative='two-sided')
+                    if p_val < 0.05:
+                        clsa_mean = np.mean(clsa_fits)
+                        algo_mean = np.mean(algo_fits)
+                        if clsa_mean < algo_mean:
+                            symbol = '+'
+                            conclusion = 'CLSA-PO显著优于'
+                        else:
+                            symbol = '-'
+                            conclusion = 'CLSA-PO显著劣于'
+                    else:
+                        symbol = '≈'
+                        conclusion = '无显著差异'
+                except ValueError:
+                    symbol = '≈'
+                    conclusion = '无法检验'
+                    p_val = float('nan')
+
+            test_results[func_name][algo_name] = {
+                'p_value': float(p_val),
+                'symbol': symbol,
+                'conclusion': conclusion,
+            }
+            print(f"{func_name:<12} {algo_name:<10} {p_val:<15.4e} {symbol:<6} {conclusion} {algo_name}")
+
+    # 保存检验结果
+    test_path = os.path.join(OUTPUT_DIR, 'wilcoxon_test.json')
+    with open(test_path, 'w', encoding='utf-8') as f:
+        json.dump(test_results, f, indent=2, ensure_ascii=False)
+    print(f"\n检验结果已保存到 {test_path}")
+
+    return test_results
+
+
 def plot_convergence(results):
     """生成收敛曲线对比图"""
     import matplotlib
@@ -147,7 +206,10 @@ def plot_convergence(results):
         print(f"已保存: {path}")
 
     # 全部函数的合并图
-    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+    n_funcs = len(results)
+    n_cols = 4
+    n_rows = (n_funcs + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(20, 5 * n_rows))
     axes = axes.flatten()
 
     for idx, func_name in enumerate(results):
@@ -165,7 +227,8 @@ def plot_convergence(results):
         ax.set_yscale('log')
 
     # 隐藏多余的子图
-    axes[5].set_visible(False)
+    for idx in range(n_funcs, len(axes)):
+        axes[idx].set_visible(False)
 
     plt.suptitle('基准测试函数收敛曲线对比', fontsize=16, y=1.02)
     plt.tight_layout()
@@ -182,6 +245,7 @@ if __name__ == '__main__':
     print(f"函数: {list(BENCHMARK_FUNCTIONS.keys())}")
 
     results = run_experiment()
+    wilcoxon_rank_sum_test(results)
     plot_convergence(results)
 
     print("\n实验完成！")
