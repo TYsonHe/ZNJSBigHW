@@ -7,7 +7,12 @@
       "Bash(pip --version)",
       "Bash(python:*)",
       "WebFetch(domain:scholar.google.com)",
-      "WebFetch(domain:www.semanticscholar.org)"
+      "WebFetch(domain:www.semanticscholar.org)",
+      "PowerShell(python -m pytest \"final_report/test_experiment.py\" -q)",
+      "PowerShell(python \"final_report/test_experiment.py\")",
+      "PowerShell(python \"final_report/experiment.py\")",
+      "PowerShell(python \"final_report/test_make_docx.py\")",
+      "PowerShell(python \"final_report/make_docx.py\")"
     ]
   }
 }
